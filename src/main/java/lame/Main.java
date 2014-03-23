@@ -2,13 +2,10 @@ package lame;
 
 import lame.data.BinaryDataFileReader;
 import lame.data.BinaryDataFileWriter;
-import lame.data.BinaryRecordDecoder;
-import lame.data.BinaryRecordEncoder;
 import lame.data.BinarySchemaDecoder;
 import lame.data.BinarySchemaEncoder;
+import lame.data.IdentityBlockCodec;
 import lame.data.Record;
-import lame.data.RecordDecoder;
-import lame.data.RecordEncoder;
 import lame.schema.ArrayField;
 import lame.schema.IntField;
 import lame.schema.RecordField;
@@ -95,7 +92,7 @@ public class Main {
 
 		BinaryDataFileWriter writer = new BinaryDataFileWriter(schema, os);
 
-		for (int i = 0; i < 3000; i++) {
+		for (int i = 0; i < 9999999; i++) {
 			writer.write(record);
 		}
 
@@ -117,7 +114,7 @@ public class Main {
 		System.out.println("Decoded Records:");
 ////
 		for (Record decodedRecord: reader) {
-			System.out.println(decodedRecord);
+			//System.out.println(decodedRecord);
 		}
 
 		System.out.println("Read " + reader.getBlocksRead() + " blocks.");

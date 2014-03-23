@@ -8,24 +8,30 @@ import java.io.OutputStream;
 import java.util.Random;
 
 public class BinaryDataFileWriter {
-	private static final int MAX_BLOCK_SIZE = 2048;
+	static final int MAX_BLOCK_SIZE = 16384;
 
-	private final OutputStream os;
+	private final OutputStream output;
 	private RecordEncoder recordEncoder;
+	private BlockCodec blockCodec;
+
 	private ByteArrayOutputStream currentBlock;
 	private long recordsInCurrentBlock;
 	private byte[] syncMarker;
 
-	public BinaryDataFileWriter(RecordField schema, OutputStream os) throws IOException {
-		this.os = os;
+	public BinaryDataFileWriter(RecordField schema, OutputStream output) throws IOException {
+		this(schema, output, new DeflateBlockCodec());
+	}
 
-		syncMarker = generateSyncMarker();
-		writeHeader(schema, syncMarker);
-
-		recordEncoder = new BinaryRecordEncoder();
+	public BinaryDataFileWriter(RecordField schema, OutputStream output, BlockCodec blockCodec) throws IOException {
+		this.output = output;
+		this.recordEncoder = new BinaryRecordEncoder();
+		this.blockCodec = blockCodec;
 
 		currentBlock = new ByteArrayOutputStream();
 		recordsInCurrentBlock = 0;
+
+		syncMarker = generateSyncMarker();
+		writeHeader(schema, syncMarker, blockCodec.getClass());
 	}
 
 	public void write(Record record) throws IOException {
@@ -42,25 +48,28 @@ public class BinaryDataFileWriter {
 			writeBlock();
 		}
 
-		os.close();
+		output.close();
 	}
 
-	private void writeHeader(RecordField schema, byte[] syncMarker) throws IOException {
+	private void writeHeader(RecordField schema, byte[] syncMarker, Class blockCodec) throws IOException {
 		BinarySchemaEncoder schemaEncoder = new BinarySchemaEncoder();
-		schemaEncoder.encode(schema, os);
+		schemaEncoder.encode(schema, output);
 
-		os.write(syncMarker);
+		BinaryRecordEncoder.encodeString(blockCodec.getCanonicalName(), output);
+
+		output.write(syncMarker);
 	}
 
 	private void writeBlock() throws IOException {
-		os.write(BinaryRecordEncoder.encodeLong(recordsInCurrentBlock));
-		os.write(BinaryRecordEncoder.encodeInt(currentBlock.size()));
+		ByteArrayOutputStream encodedBlock = new ByteArrayOutputStream(currentBlock.size());
+		int encodedBlockSize = blockCodec.encode(currentBlock.toByteArray(), encodedBlock);
 
-		currentBlock.writeTo(os);
+		output.write(BinaryRecordEncoder.encodeLong(recordsInCurrentBlock));
+		output.write(BinaryRecordEncoder.encodeInt(encodedBlockSize));
+		encodedBlock.writeTo(output);
+		output.write(syncMarker);
+
 		currentBlock.reset();
-
-		os.write(syncMarker);
-
 		recordsInCurrentBlock = 0;
 	}
 

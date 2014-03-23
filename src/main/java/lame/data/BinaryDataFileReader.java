@@ -7,7 +7,8 @@ import java.io.InputStream;
 import java.util.Iterator;
 
 public class BinaryDataFileReader implements Iterable<Record> {
-	private final InputStream is;
+	private final InputStream input;
+	private final BlockCodec blockCodec;
 	private RecordDecoder recordDecoder;
 	private byte[] syncMarker;
 
@@ -17,15 +18,18 @@ public class BinaryDataFileReader implements Iterable<Record> {
 
 	private long blocksRead;
 
-	public BinaryDataFileReader(InputStream is) throws IOException {
-		this.is = is;
+	private InputStream currentBlock;
+
+	public BinaryDataFileReader(InputStream input) throws IOException {
+		this.input = input;
 
 		BinarySchemaDecoder schemaDecoder = new BinarySchemaDecoder();
-		RecordField schema = schemaDecoder.decode(is);
+		RecordField schema = schemaDecoder.decode(input);
 
 		recordDecoder = new BinaryRecordDecoder(schema);
 
-		syncMarker = readSyncMarker(is);
+		blockCodec = readBlockCodec(input);
+		syncMarker = readSyncMarker(input);
 
 		blocksRead = 0;
 		nextBlock();
@@ -33,13 +37,12 @@ public class BinaryDataFileReader implements Iterable<Record> {
 
 	public Record read() throws IOException {
 		if (recordsSeenSoFar == currentBlockRecordCount) {
-			validateSyncMarker();
 			nextBlock();
 		} else if (recordsSeenSoFar > currentBlockRecordCount) {
 			throw new RuntimeException("Read more records than there should have been!");
 		}
 
-		Record record = recordDecoder.decode(is);
+		Record record = recordDecoder.decode(currentBlock);
 		if (record != null) {
 			recordsSeenSoFar++;
 		}
@@ -84,16 +87,37 @@ public class BinaryDataFileReader implements Iterable<Record> {
 	}
 
 	private void nextBlock() throws IOException {
-		Long nextBlockRecordCount = readBlockRecordCount(is);
+		Long nextBlockRecordCount = readBlockRecordCount(input);
 		if (nextBlockRecordCount != null) {
 			currentBlockRecordCount = nextBlockRecordCount;
-			readBlockSize(is);
+
+			int blockSize = readBlockSize(input);
+			currentBlock = blockCodec.decode(input, blockSize);
+
+			validateSyncMarker();
+
 			blocksRead++;
 		} else {
 			currentBlockRecordCount = 0;
 		}
 
 		recordsSeenSoFar = 0;
+	}
+
+	private BlockCodec readBlockCodec(InputStream is) throws IOException {
+		String codecClassName = BinaryRecordDecoder.readString(is);
+
+		try {
+			Class codecClass = Class.forName(codecClassName);
+			return (BlockCodec) codecClass.newInstance();
+
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException("Could not find block codec class: " + codecClassName, e);
+		} catch (InstantiationException e) {
+			throw new RuntimeException("Error instantiating block codec: " + codecClassName, e);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException("Error instantiating block codec: " + e.getMessage(), e);
+		}
 	}
 
 	private byte[] readSyncMarker(InputStream is) throws IOException {
@@ -108,7 +132,7 @@ public class BinaryDataFileReader implements Iterable<Record> {
 	}
 
 	private void validateSyncMarker() throws IOException {
-		byte[] blockSyncMarker = readSyncMarker(is);
+		byte[] blockSyncMarker = readSyncMarker(input);
 		for (int i = 0; i < syncMarker.length; i++) {
 			if (blockSyncMarker[i] != syncMarker[i]) {
 				throw new RuntimeException("Invalid block sync marker");
