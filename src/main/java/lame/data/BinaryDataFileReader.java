@@ -4,13 +4,15 @@ import lame.schema.RecordField;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class BinaryDataFileReader implements Iterable<Record> {
 	private final InputStream input;
 	private final BlockCodec blockCodec;
 	private RecordDecoder recordDecoder;
-	private byte[] syncMarker;
+	private int[] syncMarker;
 
 	private long currentBlockRecordCount;
 
@@ -48,6 +50,40 @@ public class BinaryDataFileReader implements Iterable<Record> {
 		}
 
 		return record;
+	}
+
+	public void skip(long offset) throws IOException {
+		input.skip(offset);
+
+		int inputBufferOffset = 0;
+
+		int nextByte = input.read();
+
+		List<Integer> inputBuffer = new ArrayList<Integer>();
+
+		while (nextByte != -1) {
+			inputBuffer.add(nextByte);
+
+			inputBufferOffset = findOffsetOfNextSyncMarker(inputBuffer, inputBufferOffset);
+
+			if ((inputBuffer.size() - inputBufferOffset) == syncMarker.length) {
+				break;
+			}
+
+			nextByte = input.read();
+		}
+	}
+
+	public int findOffsetOfNextSyncMarker(List<Integer> inputBuffer, int inputBufferOffset) {
+		int syncMarkerPos = 0;
+		for (int i = inputBufferOffset; i < inputBuffer.size(); i++) {
+			if (syncMarker[syncMarkerPos] == inputBuffer.get(i)) {
+				syncMarkerPos++;
+			} else {
+				return findOffsetOfNextSyncMarker(inputBuffer, inputBufferOffset + 1);
+			}
+		}
+		return inputBufferOffset;
 	}
 
 	public long getBlocksRead() {
@@ -120,19 +156,21 @@ public class BinaryDataFileReader implements Iterable<Record> {
 		}
 	}
 
-	private byte[] readSyncMarker(InputStream is) throws IOException {
-		byte[] syncMarker = new byte[16];
-		int bytesRead = is.read(syncMarker, 0, 16);
-
-		if (bytesRead != syncMarker.length) {
-			throw new RuntimeException("Could not read sync marker");
+	private int[] readSyncMarker(InputStream is) throws IOException {
+		int[] syncMarker = new int[16];
+		for (int i = 0; i < syncMarker.length; i++) {
+			int nextValue = is.read();
+			if (nextValue == -1) {
+				throw new RuntimeException("Could not read sync marker");
+			}
+			syncMarker[i] = nextValue;
 		}
 
 		return syncMarker;
 	}
 
 	private void validateSyncMarker() throws IOException {
-		byte[] blockSyncMarker = readSyncMarker(input);
+		int[] blockSyncMarker = readSyncMarker(input);
 		for (int i = 0; i < syncMarker.length; i++) {
 			if (blockSyncMarker[i] != syncMarker[i]) {
 				throw new RuntimeException("Invalid block sync marker");

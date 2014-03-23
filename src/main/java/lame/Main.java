@@ -92,7 +92,7 @@ public class Main {
 
 		BinaryDataFileWriter writer = new BinaryDataFileWriter(schema, os);
 
-		for (int i = 0; i < 9999999; i++) {
+		for (int i = 0; i < 999999; i++) {
 			writer.write(record);
 		}
 
@@ -110,6 +110,8 @@ public class Main {
 
 		InputStream is = new BufferedInputStream(new FileInputStream("test.out"));
 		BinaryDataFileReader reader = new BinaryDataFileReader(is);
+
+		reader.skip(250);
 //
 		System.out.println("Decoded Records:");
 ////
