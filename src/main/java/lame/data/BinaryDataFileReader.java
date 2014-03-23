@@ -1,12 +1,11 @@
 package lame.data;
 
+import lame.StupidRingBuffer;
 import lame.schema.RecordField;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 public class BinaryDataFileReader implements Iterable<Record> {
 	private final InputStream input;
@@ -55,18 +54,15 @@ public class BinaryDataFileReader implements Iterable<Record> {
 	public void skip(long offset) throws IOException {
 		input.skip(offset);
 
-		int inputBufferOffset = 0;
-
 		int nextByte = input.read();
-
-		List<Integer> inputBuffer = new ArrayList<Integer>();
+		StupidRingBuffer inputBuffer = new StupidRingBuffer(16);
 
 		while (nextByte != -1) {
 			inputBuffer.add(nextByte);
 
-			inputBufferOffset = findOffsetOfNextSyncMarker(inputBuffer, inputBufferOffset);
+			findOffsetOfNextSyncMarker(inputBuffer);
 
-			if ((inputBuffer.size() - inputBufferOffset) == syncMarker.length) {
+			if (inputBuffer.size() == syncMarker.length) {
 				break;
 			}
 
@@ -74,16 +70,16 @@ public class BinaryDataFileReader implements Iterable<Record> {
 		}
 	}
 
-	public int findOffsetOfNextSyncMarker(List<Integer> inputBuffer, int inputBufferOffset) {
+	public void findOffsetOfNextSyncMarker(StupidRingBuffer inputBuffer) {
 		int syncMarkerPos = 0;
-		for (int i = inputBufferOffset; i < inputBuffer.size(); i++) {
+		for (int i = 0; i < inputBuffer.size(); i++) {
 			if (syncMarker[syncMarkerPos] == inputBuffer.get(i)) {
 				syncMarkerPos++;
 			} else {
-				return findOffsetOfNextSyncMarker(inputBuffer, inputBufferOffset + 1);
+				inputBuffer.dropFirst();
+				findOffsetOfNextSyncMarker(inputBuffer);
 			}
 		}
-		return inputBufferOffset;
 	}
 
 	public long getBlocksRead() {

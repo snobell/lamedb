@@ -3,18 +3,24 @@ package lame;
 public class StupidRingBuffer {
 	private int[] bytes;
 	private int start;
+	private int end;
 	private int size;
 
 	public StupidRingBuffer(int capacity) {
 		bytes = new int[capacity];
 		start = 0;
+		end = 0;
 		size = 0;
 	}
 
 	public void add(int value) {
-		bytes[start] = value;
+		bytes[end] = value;
 
-		start = (start + 1) % bytes.length;
+		if (end == start && size == bytes.length) {
+			start = (start + 1) % bytes.length;
+		}
+
+		end = (end + 1) % bytes.length;
 
 		if (size < bytes.length) {
 			size++;
@@ -38,6 +44,10 @@ public class StupidRingBuffer {
 		if (size == 0) {
 			throw new IndexOutOfBoundsException();
 		}
+
+		// x x x
+		// End = 0
+		// Start = 0
 
 		start = (start + 1) % bytes.length;
 		size--;

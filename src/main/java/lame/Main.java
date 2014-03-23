@@ -111,7 +111,7 @@ public class Main {
 		InputStream is = new BufferedInputStream(new FileInputStream("test.out"));
 		BinaryDataFileReader reader = new BinaryDataFileReader(is);
 
-		reader.skip(250);
+		reader.skip(200);
 //
 		System.out.println("Decoded Records:");
 ////
