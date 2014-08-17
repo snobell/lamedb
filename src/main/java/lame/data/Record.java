@@ -103,7 +103,7 @@ public class Record implements Map<String, Object> {
 			fieldValues.add(field.getName() + "=" + data.get(field.getName()));
 		}
 
-		s.append(StringUtils.join(fieldValues, ", "));
+		s.append(StringUtils.join(fieldValues, ",\n"));
 		s.append(")");
 		return s.toString();
 	}
