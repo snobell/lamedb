@@ -1,6 +1,6 @@
-package lame.test
+package lame.test.utils
 
-import lame.StupidRingBuffer
+import lame.utils.StupidRingBuffer
 
 class StupidRingBufferTest extends GroovyTestCase {
 	StupidRingBuffer buffer

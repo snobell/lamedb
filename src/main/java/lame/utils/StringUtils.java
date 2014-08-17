@@ -1,4 +1,4 @@
-package lame;
+package lame.utils;
 
 import java.util.Iterator;
 

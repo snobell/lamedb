@@ -1,4 +1,4 @@
-package lame;
+package lame.utils;
 
 public class StupidRingBuffer {
 	private int[] bytes;

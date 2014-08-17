@@ -1,6 +1,6 @@
 package lame.data;
 
-import lame.StupidRingBuffer;
+import lame.utils.StupidRingBuffer;
 import lame.schema.RecordField;
 
 import java.io.IOException;

@@ -1,6 +1,6 @@
 package lame.schema;
 
-import lame.StringUtils;
+import lame.utils.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;

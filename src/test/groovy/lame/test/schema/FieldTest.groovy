@@ -1,4 +1,4 @@
-package lame.test
+package lame.test.schema
 
 import lame.schema.ArrayField
 import lame.schema.Field

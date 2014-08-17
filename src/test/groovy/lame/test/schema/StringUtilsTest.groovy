@@ -1,6 +1,6 @@
-package lame.test
+package lame.test.schema
 
-import lame.StringUtils
+import lame.utils.StringUtils
 
 class StringUtilsTest extends GroovyTestCase {
 	void testEmptyList() {

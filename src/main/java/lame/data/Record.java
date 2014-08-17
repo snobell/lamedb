@@ -1,6 +1,6 @@
 package lame.data;
 
-import lame.StringUtils;
+import lame.utils.StringUtils;
 import lame.schema.Field;
 import lame.schema.RecordField;
 
