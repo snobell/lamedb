@@ -29,6 +29,12 @@ public class Field {
 		}
 	}
 
+	public static class InvalidFieldException extends RuntimeException {
+		public InvalidFieldException(String message) {
+			super(message);
+		}
+	}
+
 	final private String name;
 	private final Type type;
 

@@ -17,6 +17,19 @@ public class RecordField extends Field implements Iterable<Field> {
 		this.fields = fields;
 	}
 
+	public Set<String> getFieldSet() {
+		return fields.keySet();
+	}
+
+	@Override
+	public Iterator<Field> iterator() {
+		return fields.values().iterator();
+	}
+
+	public int size() {
+		return fields.size();
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder s = new StringBuilder();
@@ -31,19 +44,6 @@ public class RecordField extends Field implements Iterable<Field> {
 		s.append(StringUtils.join(fieldsToString, ", "));
 		s.append(")");
 		return s.toString();
-	}
-
-	public Set<String> getFieldSet() {
-		return fields.keySet();
-	}
-
-	@Override
-	public Iterator<Field> iterator() {
-		return fields.values().iterator();
-	}
-
-	public int size() {
-		return fields.size();
 	}
 
 	public static class Builder {
@@ -67,7 +67,7 @@ public class RecordField extends Field implements Iterable<Field> {
 
 		private void validate() {
 			if (name == null || fields.size() == 0) {
-				throw new RuntimeException("Invalid RecordField");
+				throw new InvalidFieldException("Invalid RecordField");
 			}
 		}
 	}
