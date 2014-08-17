@@ -12,6 +12,12 @@ import java.util.Map;
 import java.util.Set;
 
 public class Record implements Map<String, Object> {
+	public static class FieldNotInRecord extends RuntimeException {
+		public FieldNotInRecord(String message) {
+			super(message);
+		}
+	}
+
 	private Map<String, Object> data;
 
 	private final RecordField schema;
@@ -53,7 +59,7 @@ public class Record implements Map<String, Object> {
 	@Override
 	public Object put(String field, Object value) {
 		if (!schema.getFieldSet().contains(field)) {
-			throw new RuntimeException("field '" + field + "' is not in the Record's schema");
+			throw new FieldNotInRecord("field '" + field + "' is not in the Record's schema");
 		}
 		return data.put(field, value);
 	}
