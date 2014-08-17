@@ -71,7 +71,7 @@ class BinarySchemaEncoderDecoderTest extends GroovyTestCase {
 			104, 111, 98, 98, 105, 101, 115, // Bytes of field name (hobbies)
 			0, 0, 0, 2,  // Field type (String)
 			0 ,0, 0, 5,  // Length of field name (hobby)
-			104, 111, 98, 98, 121// Bytes of field name (hobby)
+			104, 111, 98, 98, 121 // Bytes of field name (hobby)
 		] as byte[]
 	}
 }
