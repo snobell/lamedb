@@ -1,124 +1,71 @@
 package lame;
 
 import lame.data.BinaryDataFileReader;
-import lame.data.BinaryDataFileWriter;
-import lame.data.BinarySchemaDecoder;
-import lame.data.BinarySchemaEncoder;
-import lame.data.IdentityBlockCodec;
 import lame.data.Record;
-import lame.schema.ArrayField;
-import lame.schema.IntField;
-import lame.schema.RecordField;
-import lame.schema.StringField;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Arrays;
 
 public class Main {
-	public static void main(String[] args) throws IOException {
-		RecordField addressField = new RecordField.Builder()
-				.setName("address")
-				.addField(new StringField("street"))
-				.addField(new StringField("suburb"))
-				.addField(new StringField("state"))
-				.addField(new StringField("postcode"))
-				.build();
+	public static void main(String[] args) throws IOException, ParseException {
+		CommandLineParser parser = new BasicParser();
 
-		RecordField phoneNumberField = new RecordField.Builder()
-				.setName("phoneNumber")
-				.addField(new StringField("areaCode"))
-				.addField(new StringField("number"))
-				.build();
+		Options options = new Options();
+		options.addOption(
+			OptionBuilder.withArgName("file")
+			             .hasArg()
+			             .withDescription("Path to a data file")
+			             .create("file"));
+		options.addOption( "s", "schema", false, "display the schema of a datafile only" );
+		options.addOption( "h", "help", false, "display this help text" );
 
-		RecordField schema = new RecordField.Builder()
-				.setName("person")
-				.addField(new StringField("givenName"))
-				.addField(new StringField("surname"))
-				.addField(new IntField("age"))
-				.addField(addressField)
-				.addField(new ArrayField("hobbies", new StringField("hobby")))
-				.addField(new ArrayField("phoneNumbers", phoneNumberField))
-				.build();
+		CommandLine line = parser.parse( options, args );
 
-		System.out.println(schema.toString());
-
-		BinarySchemaEncoder schemaEncoder = new BinarySchemaEncoder();
-		ByteArrayOutputStream sos = new ByteArrayOutputStream();
-		schemaEncoder.encode(schema, sos);
-
-		BinarySchemaDecoder schemaDecoder = new BinarySchemaDecoder();
-		ByteArrayInputStream sis = new ByteArrayInputStream(sos.toByteArray());
-
-		RecordField decodedSchema = schemaDecoder.decode(sis);
-		System.out.println(decodedSchema.toString());
-
-
-		Record addressRecord = new Record(addressField);
-		addressRecord.put("street", "123 Fake St");
-		addressRecord.put("suburb", "Melbourne");
-		addressRecord.put("state", "VIC");
-		addressRecord.put("postcode", "3000");
-
-		Record record = new Record(schema);
-
-		record.put("givenName", "Chris");
-		record.put("surname", "Scobell");
-		record.put("age", 27);
-		record.put("address", addressRecord);
-		record.put("hobbies", Arrays.asList("Fishing", "Cooking", "Skydiving", "Knitting"));
-
-		Record phoneNumber1 = new Record(phoneNumberField);
-		phoneNumber1.put("areaCode", "+61");
-		phoneNumber1.put("number", "62924035");
-
-		Record phoneNumber2 = new Record(phoneNumberField);
-		phoneNumber2.put("areaCode", "+61");
-		phoneNumber2.put("number", "49560930");
-
-		record.put("phoneNumbers", Arrays.asList(phoneNumber1, phoneNumber2));
-
-		System.out.println(record);
-
-//		ByteArrayOutputStream os = new ByteArrayOutputStream();
-		OutputStream os = new BufferedOutputStream(new FileOutputStream("test.out"));
-
-		BinaryDataFileWriter writer = new BinaryDataFileWriter(schema, os);
-
-		for (int i = 0; i < 999999; i++) {
-			writer.write(record);
+		// Display help.
+		if(line.hasOption( "help") || !line.hasOption("file")) {
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp("tool", options);
+			System.exit(0);
 		}
 
-		writer.close();
+		BinaryDataFileReader reader = getReader(line.getOptionValue("file"));
 
+		if (line.hasOption("schema")) {
+			displaySchema(reader);
+		} else {
+			displayData(reader);
+		}
+	}
 
-//		byte[] bytes = os.toByteArray();
-//		System.out.println("Encoded " + bytes.length + " bytes");
-//
-//		for (byte b: bytes) {
-//			System.out.println(Byte.toString(b));
-//		}
-//
-//		ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-
-		InputStream is = new BufferedInputStream(new FileInputStream("test.out"));
-		BinaryDataFileReader reader = new BinaryDataFileReader(is);
-
-		reader.skip(200);
-//
-		System.out.println("Decoded Records:");
-////
-		for (Record decodedRecord: reader) {
-			//System.out.println(decodedRecord);
+	private static BinaryDataFileReader getReader(String fileName) throws IOException {
+		try {
+			InputStream is = new BufferedInputStream(new FileInputStream(fileName));
+			return new BinaryDataFileReader(is);
+		} catch (FileNotFoundException e) {
+			System.err.println("Error: file not found \"" + fileName + "\"");
+			System.exit(1);
 		}
 
-		System.out.println("Read " + reader.getBlocksRead() + " blocks.");
+		return null;
+	}
+
+	private static void displaySchema(BinaryDataFileReader reader) throws IOException {
+		System.out.println(reader.getSchema());
+	}
+
+	private static void displayData(BinaryDataFileReader reader) {
+		for (Record r: reader) {
+			System.out.println(r);
+		}
 	}
 }

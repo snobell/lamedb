@@ -1,7 +1,7 @@
 package lame.test.data
 
-import lame.data.BinaryDataFileReader
-import lame.data.BinaryDataFileWriter
+import lame.data.BinaryRecordDecoder
+import lame.data.BinaryRecordEncoder
 import lame.data.Record
 import lame.schema.ArrayField
 import lame.schema.IntField
@@ -9,66 +9,75 @@ import lame.schema.RecordField
 import lame.schema.StringField
 
 class BinaryRecordEncoderDecoderTest extends GroovyTestCase {
-	public void testDecoderCanDecodeDataFromEncoder() {
-		RecordField addressField = new RecordField.Builder()
-				.setName("address")
-				.addField(new StringField("street"))
-				.addField(new StringField("suburb"))
-				.addField(new StringField("state"))
-				.addField(new StringField("postcode"))
-				.build();
-
-		RecordField phoneNumberField = new RecordField.Builder()
-				.setName("phoneNumber")
-				.addField(new StringField("areaCode"))
-				.addField(new StringField("number"))
-				.build();
-
+	void testEncoderDecoder() {
 		RecordField schema = new RecordField.Builder()
 				.setName("person")
 				.addField(new StringField("givenName"))
 				.addField(new StringField("surname"))
 				.addField(new IntField("age"))
-				.addField(addressField)
 				.addField(new ArrayField("hobbies", new StringField("hobby")))
-				.addField(new ArrayField("phoneNumbers", phoneNumberField))
 				.build();
-
-		Record addressRecord = new Record(addressField);
-		addressRecord.put("street", "123 Fake St");
-		addressRecord.put("suburb", "Melbourne");
-		addressRecord.put("state", "VIC");
-		addressRecord.put("postcode", "3000");
 
 		Record record = new Record(schema);
 
-		record.put("givenName", "Chris");
-		record.put("surname", "Scobell");
-		record.put("age", 27);
-		record.put("address", addressRecord);
-		record.put("hobbies", ["Fishing", "Cooking", "Skydiving", "Knitting"]);
+		record.put("givenName", "Chris")
+		record.put("surname", "Scobell")
+		record.put("age", 27)
+		record.put("hobbies", ["Fishing", "Cooking", "Skydiving", "Knitting"])
 
-		Record phoneNumber1 = new Record(phoneNumberField);
-		phoneNumber1.put("areaCode", "+61");
-		phoneNumber1.put("number", "62924035");
+		BinaryRecordEncoder encoder = new BinaryRecordEncoder()
 
-		Record phoneNumber2 = new Record(phoneNumberField);
-		phoneNumber2.put("areaCode", "+61");
-		phoneNumber2.put("number", "49560930");
+		ByteArrayOutputStream os = new ByteArrayOutputStream()
+		encoder.encode(record, os)
 
-		record.put("phoneNumbers", [phoneNumber1, phoneNumber2]);
+		ByteArrayInputStream is = new ByteArrayInputStream(os.toByteArray())
 
-		ByteArrayOutputStream os = new ByteArrayOutputStream();
-		BinaryDataFileWriter writer = new BinaryDataFileWriter(schema, os);
-
-		writer.write(record)
-		writer.close()
-
-		ByteArrayInputStream is = new ByteArrayInputStream(os.toByteArray());
-		BinaryDataFileReader reader = new BinaryDataFileReader(is);
-
-		Record decodedRecord = reader.read()
+		BinaryRecordDecoder decoder = new BinaryRecordDecoder(schema)
+		Record decodedRecord = decoder.decode(is)
 
 		assert decodedRecord == record
+	}
+
+	void testBinaryFormat() {
+		RecordField schema = new RecordField.Builder()
+				.setName("person")
+				.addField(new StringField("surname"))
+				.addField(new IntField("age"))
+				.addField(new ArrayField("hobbies", new StringField("hobby")))
+				.build();
+
+		Record record = new Record(schema);
+
+		record.put("surname", "Scobell")
+		record.put("age", 27)
+		record.put("hobbies", ["Fishing", "Cooking", "Skydiving", "Knitting"])
+
+		BinaryRecordEncoder encoder = new BinaryRecordEncoder()
+
+		ByteArrayOutputStream os = new ByteArrayOutputStream()
+		encoder.encode(record, os)
+
+		assert os.toByteArray() == [
+			0, 0, 0, 1, // Record code
+			0, 0, 0, 2, // String code
+			0, 0, 0, 7, // Lengh of string (Scobell)
+			83, 99, 111, 98, 101, 108, 108, // Bytes of string (Scobell)
+			0, 0, 0, 3, // Int code
+			0, 0, 0, 27, // Value of int
+			0, 0, 0, 4, // Array Code
+			0, 0, 0, 4, // Length of Array
+			0, 0, 0, 2, // Array type code (string)
+			0, 0, 0, 7, // Length of first array element string (Fishing)
+			70, 105, 115, 104, 105, 110, 103, // Bytes of string (Fishing)
+			0, 0, 0, 2, // Array type code (string)
+			0, 0, 0, 7, // Length of 2nd array element string (Cooking)
+			67, 111, 111, 107, 105, 110, 103,  // Bytes of string (Cooking)
+			0, 0, 0, 2, // Array type code (string)
+			0, 0, 0, 9, // Length of 3rd array element string (Skydiving)
+			83, 107, 121, 100, 105, 118, 105, 110, 103, // Bytes of skydiving
+			0, 0, 0, 2, // Array type code (string)
+			0, 0, 0, 8, // Length of 4th element of array (Knitting)
+			75, 110, 105, 116, 116, 105, 110, 103 // Bytes of Kitting
+		] as byte[]
 	}
 }

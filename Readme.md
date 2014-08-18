@@ -30,6 +30,31 @@ The seralization process supports pluggable encoders/decoders for Records, Block
 By default the "BinaryDataFileWriter" and "BinaryDataFileReader" will use the "BinaryRecordEncoder/Decoder" and the
 "BinarySchemaEncoder/Decoder". While the default block codec used is "DeflateBlockCodec".
 
+The BinaryRecordEncoder encodes the fields of a record in the order that they appear in the schema. It does not
+output the name of any field, so the encoded data needs to be interpreted alongside the schema decoded from the
+DataFile header to figure out what field is what.
+
+Types are encoded as follows:
+* String
+** 4 byte type code (2 for String)
+** 4 byte string length
+** The bytes of the string encoded in UTF8
+* Int
+** 4 byte type code (3 for Int)
+** 4 bytes of Int (in the current byte order!)
+*
+
+## Commandline Tool
+Lamedb has a simple commandline tool that can be used to cat the contents of a DataFile to stdout or to display the 
+schema of the file.
+
+```
+usage: tool
+ -file <file>   Path to a data file
+ -h,--help      display this help text
+ -s,--schema    display the schema of a datafile only
+```
+
 ## Examples
 
 Define a simple record schema:
@@ -120,3 +145,13 @@ for (Record decodedRecord: reader) {
 	System.out.println(decodedRecord);
 }
 ```
+
+## What next?
+Things I want to try out in the future:
+
+* Indexes (So it's more like an actual database!)
+* Column store encodings
+* Support for more types
+* More efficient encodings of Ints
+* Projection of one Record to another
+* Queries (Also more like a DB!)

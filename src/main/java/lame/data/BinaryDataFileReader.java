@@ -10,6 +10,7 @@ import java.util.Iterator;
 public class BinaryDataFileReader implements Iterable<Record> {
 	private final InputStream input;
 	private final BlockCodec blockCodec;
+	private final RecordField schema;
 	private RecordDecoder recordDecoder;
 	private int[] syncMarker;
 
@@ -25,7 +26,7 @@ public class BinaryDataFileReader implements Iterable<Record> {
 		this.input = input;
 
 		BinarySchemaDecoder schemaDecoder = new BinarySchemaDecoder();
-		RecordField schema = schemaDecoder.decode(input);
+		schema = schemaDecoder.decode(input);
 
 		recordDecoder = new BinaryRecordDecoder(schema);
 
@@ -116,6 +117,10 @@ public class BinaryDataFileReader implements Iterable<Record> {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	public RecordField getSchema() {
+		return schema;
 	}
 
 	private void nextBlock() throws IOException {
